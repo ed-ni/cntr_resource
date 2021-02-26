@@ -1,0 +1,27 @@
+
+avrdude: AVR device initialized and ready to accept instructions
+
+Reading | ################################################## | 100% 0.01s
+
+avrdude: Device signature = 0x1e930f (probably m88p)
+avrdude: erasing chip
+avrdude: reading input file ".pio/build/ATmega88P/firmware.hex"
+avrdude: writing flash (1146 bytes):
+
+Writing | ################################################## | 100% 1.05s
+
+avrdude: 1146 bytes of flash written
+avrdude: verifying flash memory against .pio/build/ATmega88P/firmware.hex:
+avrdude: load data flash data from input file .pio/build/ATmega88P/firmware.hex:
+avrdude: input file .pio/build/ATmega88P/firmware.hex contains 1146 bytes
+avrdude: reading on-chip flash data:
+
+Reading | ################################################## | 100% 0.41s
+
+avrdude: verifying ...
+avrdude: 1146 bytes of flash verified
+
+avrdude: safemode: Fuses OK (E:F9, H:DF, L:E2)
+
+avrdude done.  Thank you.
+
