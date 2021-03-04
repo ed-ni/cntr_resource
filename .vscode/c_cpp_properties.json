@@ -1,0 +1,60 @@
+//
+// !!! WARNING !!! AUTO-GENERATED FILE!
+// PLEASE DO NOT MODIFY IT AND USE "platformio.ini":
+// https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags
+//
+{
+    "configurations": [
+        {
+            "name": "PlatformIO",
+            "includePath": [
+                "c:/Users/E/Documents/PlatformIO/Projects/kalitka/include",
+                "c:/Users/E/Documents/PlatformIO/Projects/kalitka/src",
+                "c:/Users/E/Documents/PlatformIO/Projects/kalitka/.pio/libdeps/attiny13a/AceButton/src",
+                "C:/Users/E/.platformio/packages/framework-arduino-avr-microcore/cores/MicroCore",
+                "C:/Users/E/.platformio/packages/framework-arduino-avr-microcore/variants/attiny13",
+                "c:/Users/E/Documents/PlatformIO/Projects/kalitka/.pio/libdeps/attiny13a/TimerInterrupt/src",
+                "c:/Users/E/Documents/PlatformIO/Projects/kalitka/.pio/libdeps/attiny13a/arduino-timer-api/src",
+                "C:/Users/E/.platformio/packages/framework-arduino-avr-microcore/libraries/AVR_examples/src",
+                "C:/Users/E/.platformio/packages/framework-arduino-avr-microcore/libraries/EEPROM/src",
+                "C:/Users/E/.platformio/packages/framework-arduino-avr-microcore/libraries/Serial_examples/src",
+                "C:/Users/E/.platformio/packages/framework-arduino-avr-microcore/libraries/TinySPI/src",
+                ""
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "c:/Users/E/Documents/PlatformIO/Projects/kalitka/include",
+                    "c:/Users/E/Documents/PlatformIO/Projects/kalitka/src",
+                    "c:/Users/E/Documents/PlatformIO/Projects/kalitka/.pio/libdeps/attiny13a/AceButton/src",
+                    "C:/Users/E/.platformio/packages/framework-arduino-avr-microcore/cores/MicroCore",
+                    "C:/Users/E/.platformio/packages/framework-arduino-avr-microcore/variants/attiny13",
+                    "c:/Users/E/Documents/PlatformIO/Projects/kalitka/.pio/libdeps/attiny13a/TimerInterrupt/src",
+                    "c:/Users/E/Documents/PlatformIO/Projects/kalitka/.pio/libdeps/attiny13a/arduino-timer-api/src",
+                    "C:/Users/E/.platformio/packages/framework-arduino-avr-microcore/libraries/AVR_examples/src",
+                    "C:/Users/E/.platformio/packages/framework-arduino-avr-microcore/libraries/EEPROM/src",
+                    "C:/Users/E/.platformio/packages/framework-arduino-avr-microcore/libraries/Serial_examples/src",
+                    "C:/Users/E/.platformio/packages/framework-arduino-avr-microcore/libraries/TinySPI/src",
+                    ""
+                ]
+            },
+            "defines": [
+                "PLATFORMIO=50100",
+                "ARDUINO_AVR_ATTINY13",
+                "F_CPU=1000000L",
+                "ARDUINO_ARCH_AVR",
+                "ARDUINO=10808",
+                "__AVR_ATtiny13A__",
+                ""
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "compilerPath": "C:/Users/E/.platformio/packages/toolchain-atmelavr/bin/avr-gcc.exe",
+            "compilerArgs": [
+                "-mmcu=attiny13a",
+                ""
+            ]
+        }
+    ],
+    "version": 4
+}
