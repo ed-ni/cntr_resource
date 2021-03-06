@@ -12,9 +12,9 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug",
-            "executable": "c:/Users/E/Documents/PlatformIO/Projects/kalitka/.pio/build/attiny13a/firmware.elf",
+            "executable": "c:/Users/rpc/Documents/kalitka/.pio/build/attiny13a/firmware.elf",
             "projectEnvName": "attiny13a",
-            "toolchainBinDir": "C:/Users/E/.platformio/packages/toolchain-atmelavr/bin",
+            "toolchainBinDir": "C:/Users/rpc/.platformio/packages/toolchain-atmelavr/bin",
             "preLaunchTask": {
                 "type": "PlatformIO",
                 "task": "Pre-Debug"
@@ -25,9 +25,9 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (skip Pre-Debug)",
-            "executable": "c:/Users/E/Documents/PlatformIO/Projects/kalitka/.pio/build/attiny13a/firmware.elf",
+            "executable": "c:/Users/rpc/Documents/kalitka/.pio/build/attiny13a/firmware.elf",
             "projectEnvName": "attiny13a",
-            "toolchainBinDir": "C:/Users/E/.platformio/packages/toolchain-atmelavr/bin",
+            "toolchainBinDir": "C:/Users/rpc/.platformio/packages/toolchain-atmelavr/bin",
             "internalConsoleOptions": "openOnSessionStart"
         }
     ]
