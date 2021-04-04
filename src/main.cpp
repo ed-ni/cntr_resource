@@ -1,142 +1,214 @@
 #include "main.h"
 
-using namespace ace_button;
+void coil(void);                //coil on/off
+void ledpin(void);              //led on/off
+void button();                  //button short/long pression
+void buzzer(long int interval); //функция звук (инт-л)
+//void LED4(byte pin, long int interval);             //функция считывания кнопки
 
-AceButton button;
-bool show = false;
-int cycle = 0;
-
-void handleEvent(AceButton *, uint8_t, uint8_t);
-uint32_t haos(uint32_t start, uint8_t pause, uint8_t pin);
-
-#define buzz PB3
+#define buzzPin PB3
 #define ledPin PB2
-#define buttInner_MISO PB1
-#define buttOuter_MOSI PB0
-#define swCoil PB4
+#define buttInnerMISO PB1
+#define buttOuterMOSI PB0
+#define coilPin PB4
+#define INTERV_DEBOUNCE 9 //0.01s x 10 = 0.1 s debounce BUZZ_DURATION
+#define INTERV_LONG 29    //0.01s x INTERV_DEBOUNCE x 30 = 3 s
+#define BUZZ_DURATION 4   //buzzer sound duration 0.05 s
+#define COIL_DURATION 199   //2 s
 
-volatile uint32_t count; // счетчик прерываний
-unsigned long timeout, mcrs;
-volatile uint32_t sec = 0;
+volatile bool press100ms = 0; //turn off coil on 6 s
+volatile bool press3s = 1; //turn off coil
+bool press;                  //press button event
+
+volatile bool timerLED1On, timerLED2On, timerLED3On, timerLED4On; //переменная вкл/выкл таймера
+volatile unsigned int buttCntr;                                   //debounced/short durations counter
+bool LED1On, LED2On, LED3On, LED4On;                              //переменная для хранения состояния
+volatile unsigned long int timerLED1, timerLED1Loop;              //переменные подсчета мс и
+volatile unsigned long int timerLED2, timerLED2Loop;              //переменные подсчета мс и
+volatile unsigned long int timerLED3, timerLED3Loop;              //переменные подсчета мс и
+volatile unsigned long int timerLED4, timerLED4Loop;              //переменные подсчета мс и
+//volatile unsigned long int timerLED4, timerLED4Loop; //переменные подсчета мс и
 
 ISR(TIM0_COMPA_vect)
 {
-  count++; // добавляем
+  if (timerLED1On) //если включен миллисекудный таймер для coil
+    timerLED1++;   //инкремент переменной таймера (+1)
+
+  if (timerLED2On) //если включен миллисекудный таймер для button
+    timerLED2++;   //инкремент переменной таймера (+1)
+
+  if (timerLED3On) //если включен миллисекудный таймер для buzzer
+    timerLED3++;   //инкремент переменной таймера (+1)
+
+  if (timerLED4On) //если включен миллисекудный таймер для LED2
+    timerLED4++;   //инкремент переменной таймера (+1)
 }
 
 void setup()
 {
   //  INIT PINs
-  DDRB |= _BV(ledPin) | _BV(buzz) | _BV(swCoil);
-  PORTB = ~_BV(ledPin) & ~_BV(buzz) | _BV(swCoil);
+  DDRB |= _BV(ledPin) | _BV(buzzPin) | _BV(coilPin);
+  PORTB = ~_BV(ledPin) & ~_BV(buzzPin) | _BV(coilPin) | _BV(buttInnerMISO) | _BV(buttOuterMOSI);
 
   TCCR0B |= _BV(CS02) | _BV(CS00); // 1200000 дел. 1024 = 853 мкс
   TCCR0A |= _BV(WGM01);            //set  CTC mode
   TIMSK0 |= _BV(OCIE0A);           // разрешение прерываний по совпадению т.рег.А
-  OCR0A = 12;                      // 853*117 =~ 0.1 сек.
-
-  timeout = 0U;
-  //timer
-  sec = eeprom_read_dword((uint32_t *)46);
-
-  // We use the AceButton::init() method here instead of using the constructor
-  // to show an alternative. Using init() allows the configuration of the
-  // hardware pin and the button to be placed closer to each other.
-  button.init(buttInner_MISO, HIGH);
-
-  // Configure the ButtonConfig with the event handler, and enable the LongPress
-  // and RepeatPress events which are turned off by default.
-  ButtonConfig *buttonConfig = button.getButtonConfig();
-  buttonConfig->setEventHandler(handleEvent);
-  buttonConfig->setFeature(ButtonConfig::kFeatureClick);
-  //buttonConfig->setFeature(ButtonConfig::kFeatureDoubleClick);
-  buttonConfig->setFeature(ButtonConfig::kFeatureLongPress);
-  buttonConfig->setFeature(ButtonConfig::kFeatureRepeatPress);
+  OCR0A = 11;                      // 853us*12 =~ 0.01 сек.
+  sei();
 }
 
 int main(void)
 {
   setup();
-  uint32_t start[5] = {0};
-  uint8_t pause[5] = {1, 10, 20, 30, 40};
-  sei();
 
   while (1)
   {
-    start[0] = haos(start[0], pause[1], ledPin);
+    coil();
+    button();
+    buzzer(600);
+    ledpin();
   }
 }
 
-///////////////////test func
-uint32_t haos(uint32_t start, uint8_t pause, uint8_t pin)
+/////////////////// func
+void coil(void) //coil function, timer 1
 {
-
-  if ((count - start) >= pause)
+  if (!timerLED1On && !press3s && press100ms) //если таймер не был запущен и разрешена coil and butt pressed
   {
-    start = count;
-    PORTB ^= (1 << pin); /* code */
+    timerLED1On = 1; //запустить таймер
   }
-  return start;
+  if (timerLED1On && press3s) //если таймер был запущен и запрещена coil
+  {
+    cli();           //остановить прерывания
+    timerLED1On = 0; //запретить пополнение переменной таймера
+    timerLED1 = 0;   //обнулить переменную таймера
+    sei();           //разрешить прерывания
+    LED1On = 0;      //установить флаг выключения
+  }
+
+  if (!press3s) //если разрешена coil
+  {
+    cli();                              //остановить прерывания
+    timerLED1Loop = timerLED1;          //сохранить значение переменной таймера
+    sei();                              //разрешить прерывания
+    if (timerLED1Loop >= COIL_DURATION) //сравнить значение таймера с заданным интервалом
+    {                                   //если значение превысило интервал
+      cli();
+      timerLED1 = 0; //обнулить таймер
+      sei();
+      if (LED1On == 1) //if flag was set
+      {
+        PORTB &= ~_BV(coilPin); //coil turn off
+      }
+      LED1On = 0; // flag reset
+      timerLED1On = 0; //запретить пополнение переменной таймера
+    }
+    else //идет счет
+    {
+      if (LED1On == 0) //если светодиод был выключен
+      {
+        PORTB |= _BV(coilPin); //coil turn on
+      }
+      LED1On = 1; //flag set
+    }
+  }
 }
 
-#define MAX_HOUR_IN_WORK 32000000U /* 3200*10000 */
-void timer_handle_interrupts(int timer)
+void button(void) //press long/sort func, timer 2
 {
-  sec++;
-  if (timeout < micros())
+  if (timerLED2On == 0)
   {
-    timeout = 0;
-    cycle = 0;
+    timerLED2On = 1;
   }
 
-  if (sec >= MAX_HOUR_IN_WORK)
+  cli();
+  timerLED2Loop = timerLED2;
+  sei();
+
+  if (timerLED2Loop >= INTERV_DEBOUNCE)
   {
-    /* code */
-    sec = 0;
-  }
-  if ((sec % 100) == 0)
-  {
-    /* code */
-    eeprom_write_dword((uint32_t *)46, sec);
+    cli();
+    timerLED2 = 0; //timer counter reset
+    sei();
+    if (~PINB & _BV(buttInnerMISO)) //is button pressed?
+    {
+      press100ms = 1;
+      if (buttCntr >= INTERV_LONG) //long press is reached max
+      {
+        buttCntr = 0;           //reset debounced counter
+        press3s = !press3s; //flip long press flag
+      }
+      else
+      {
+        buttCntr++;
+      }
+    }
+    else
+    {
+      buttCntr = 0; //reset debounced counter
+      press100ms = 0;//reset short press flag
+    }
   }
 }
 
-// The event handler for the button.
-void handleEvent(AceButton * /* button */, uint8_t eventType,
-                 uint8_t buttonState)
+void ledpin(void) //led control, temer4
 {
-
-  // Control the LED only for the Pressed and Released events.
-  // Notice that if the MCU is rebooted while the button is pressed down, no
-  // event is triggered and the LED remains off.
-  switch (eventType)
+  if (timerLED4On == 0)
   {
-  case AceButton::kEventReleased:
-    show = false;
-    break;
-  case AceButton::kEventLongPressed:
-    show = true;
-    break;
-  case AceButton::kEventClicked:
-    // if (cycle == 0)
-    // {
-    //   cycle = 1;
-    //   timeout = micros() + 1000000;
-    //   break;
-    // }
+    timerLED4On = 1;
+  }
 
-    // if (timeout > micros())
-    // {
-    //   /* code */
-    //   timeout = micros() + 1000000;
-    //   cycle++;
-    // }
-    // if (cycle >= 3)
-    // {
-    //   timeout = 0;
-    //   cycle = 0;
-    //   sec = 0;
-    // }
-    break;
+  cli();
+  timerLED4Loop = timerLED4;
+  sei();
+  if (timerLED4Loop >= INTERV_DEBOUNCE) //end time period reach
+  {
+    cli();
+    timerLED4 = 0; //timer conter reset
+    sei();
+    //  LED4On = 0; //flag reset
+    if (!press3s && press100ms) //long press
+    {
+      PORTB &= ~_BV(ledPin); //port set
+    }
+    else //
+    {
+      PORTB |= _BV(ledPin); //port reset
+    }
+  }
+}
+
+void buzzer(long int interval) //buzz control
+{
+  if (timerLED3On == 0)
+  {
+    timerLED3On = 1;
+  }
+
+  cli();
+  timerLED3Loop = timerLED3;
+  sei();
+  if (timerLED3Loop >= interval) //end time period reach
+  {
+    cli();
+    timerLED3 = 0; //timer conter reset
+    sei();
+    //  LED3On = 0; //flag reset
+  }
+  else if (timerLED3Loop > (interval - BUZZ_DURATION)) //BUZZ_DURATION time slot
+  {
+    if (LED3On == 0)
+    {
+      PORTB |= _BV(buzzPin); //port set
+      LED3On = 1;            //flag set
+    }
+  }
+  else //rest time slot
+  {
+    if (LED3On == 1)
+    {
+      PORTB &= ~_BV(buzzPin); //port reset
+      LED3On = 0;             //flag reset
+    }
   }
 }
