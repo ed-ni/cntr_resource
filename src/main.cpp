@@ -2,9 +2,8 @@
 
 void coil(void);                    //coil on/off
 void ledpin(void);                  //led on/off
-void button();                      //button short/long pression
-void buzzer(unsigned int interval); //функция звук (инт-л)
-//void LED4(byte pin, long int interval);             //функция считывания кнопки
+void button(void);                      //button short/long pression
+//void buzzer(unsigned int interval); //функция звук (инт-л)
 
 #define buzzPin PB3
 #define ledPin PB2
@@ -12,43 +11,47 @@ void buzzer(unsigned int interval); //функция звук (инт-л)
 #define buttOuterMOSI PB0
 #define coilPin PB4
 #define INTERV_DEBOUNCE 9 //0.01s x 10 = 0.1 s debounce BUZZ_DURATION
+#define INTERV_LED 9     //x 0.01s = 0.1 s led blink on duration
 #define INTERV_LONG 29    //0.01s x INTERV_DEBOUNCE x 30 = 3 s
-#define BUZZ_DURATION 4   //buzzer sound duration 0.05 s
-#define COIL_DURATION 13  //2 s
+//#define BUZZ_DURATION 4   //buzzer sound duration 0.05 s
+#define COIL_DURATION 399 //4 s
+#define LED_SLOW_MAX 20    //led blink dutycicle when coil func off
 
 volatile bool press100ms = 0; //turn off coil on 6 s
 volatile bool press3s = 1;    //turn off coil
-bool press;                   //press button event
+//bool press;                   //press button event
 
-volatile bool timerLED1On, timerLED2On, timerLED3On, timerLED4On; //переменная вкл/выкл таймера
-volatile unsigned int buttCntr;                                   //debounced/short durations counter
-bool LED2On, LED3On, LED4On;                              //переменная для хранения состояния
-volatile unsigned long int timerLED1, timerLED1Loop;              //переменные подсчета мс и
-volatile unsigned long int timerLED2, timerLED2Loop;              //переменные подсчета мс и
-volatile unsigned long int timerLED3, timerLED3Loop;              //переменные подсчета мс и
-volatile unsigned long int timerLED4, timerLED4Loop;              //переменные подсчета мс и
-//volatile unsigned long int timerLED4, timerLED4Loop; //переменные подсчета мс и
+volatile bool timer1_fl = 1, timer2_fl; //переменная вкл/выкл таймера
+// volatile bool timer3_fl, timer4_fl;
+unsigned int buttCntr, led_slow_cntr;                              //debounced/short durations counter
+bool coil_fl = 0, led_fl = 0;                      //переменная для хранения состояния
+// bool buzzer_fl;
+volatile unsigned long int timer1_cntr, timer1_counter;       //переменные подсчета мс и
+volatile unsigned long int timer2_cntr, timer2_counter;       //переменные подсчета мс и
+//volatile unsigned long int timer3_cntr, timer3_counter;       //переменные подсчета мс и
+volatile unsigned long int timer4_cntr, timer4_counter;       //переменные подсчета мс и
 
 ISR(TIM0_COMPA_vect)
 {
-  if (timerLED1On) //если включен миллисекудный таймер для coil
-    timerLED1++;   //инкремент переменной таймера (+1)
+  if (timer1_fl)   //если включен миллисекудный таймер для coil
+    timer1_cntr++; //инкремент переменной таймера (+1)
 
-  if (timerLED2On) //если включен миллисекудный таймер для button
-    timerLED2++;   //инкремент переменной таймера (+1)
+  if (timer2_fl)   //если включен миллисекудный таймер для button
+    timer2_cntr++; //инкремент переменной таймера (+1)
 
-  if (timerLED3On) //если включен миллисекудный таймер для buzzer
-    timerLED3++;   //инкремент переменной таймера (+1)
+  // if (timer3_fl)   //если включен миллисекудный таймер для buzzer
+  //   timer3_cntr++; //инкремент переменной таймера (+1)
 
-  if (timerLED4On) //если включен миллисекудный таймер для LED2
-    timerLED4++;   //инкремент переменной таймера (+1)
+ // if (timer4_fl)   //если включен миллисекудный таймер для led
+  timer4_cntr++; //инкремент переменной таймера (+1)
 }
 
 void setup()
 {
   //  INIT PINs
+  //press3s = 1; //turn off coil
   DDRB |= _BV(ledPin) | _BV(buzzPin) | _BV(coilPin);
-  PORTB = ~_BV(ledPin) & ~_BV(buzzPin) | _BV(coilPin) | _BV(buttInnerMISO) | _BV(buttOuterMOSI);
+  PORTB = ~_BV(ledPin) & ~_BV(buzzPin) & ~_BV(coilPin) | _BV(buttInnerMISO) | _BV(buttOuterMOSI);
 
   TCCR0B |= _BV(CS02) | _BV(CS00); // 1200000 дел. 1024 = 853 мкс
   TCCR0A |= _BV(WGM01);            //set  CTC mode
@@ -63,53 +66,50 @@ int main(void)
 
   while (1)
   {
-    coil();
     button();
-    buzzer(600);
+  //  buzzer(600);
     ledpin();
+    coil();
   }
 }
 
 /////////////////// func
 void coil(void) //coil function, timer 1
 {
-  bool LED1Onn;
-  if (!timerLED1On && !press3s && press100ms) //если таймер не был запущен и разрешена coil and butt pressed
+  if (!timer1_fl && !press3s && press100ms) //если таймер не был запущен и разрешена coil and butt pressed
   {
-    timerLED1On = 1; //запустить таймер
+    timer1_fl = 1; //запустить таймер
   }
-  if (timerLED1On && press3s) //если таймер был запущен и запрещена coil
+  else if (timer1_fl && press3s) //если таймер был запущен и запрещена coil
   {
     cli();           //остановить прерывания
-    timerLED1On = false; //запретить пополнение переменной таймера
-    timerLED1 = 0;   //обнулить переменную таймера
+    timer1_cntr = 0; //обнулить переменную таймера
     sei();           //разрешить прерывания
-    LED1Onn = false;      //установить флаг выключения
+    timer1_fl = 0;   //запретить пополнение переменной таймера
   }
-
-  if (!press3s && press100ms) //если разрешена coil
+  else if (timer1_fl && !press3s) //если разрешена coil
   {
-    cli();                              //остановить прерывания
-    timerLED1Loop = timerLED1;          //сохранить значение переменной таймера
-    sei();                              //разрешить прерывания
-    if (timerLED1Loop >= COIL_DURATION) //сравнить значение таймера с заданным интервалом
-    {                                   //если значение превысило интервал
+    cli();                               //остановить прерывания
+    timer1_counter = timer1_cntr;        //сохранить значение переменной таймера
+    sei();                               //разрешить прерывания
+    if (timer1_counter >= COIL_DURATION) //counter reached max
+    {
       cli();
-      timerLED1 = 0; //обнулить таймер
+      timer1_cntr = 0; //обнулить таймер
       sei();
-      if (LED1Onn == 1) //if flag was set
+      timer1_fl = 0;    //запретить пополнение переменной таймера
+      if (coil_fl == 0) //if flag was reset
       {
-        LED1Onn = false;             // flag reset
-        PORTB &= ~_BV(coilPin); //coil turn off
+        coil_fl = 1;           // flag set
+        PORTB |= _BV(coilPin); //coil turn on
       }
-      timerLED1On = 0; //запретить пополнение переменной таймера
     }
     else //идет счет
     {
-      if (LED1Onn == 0) //если светодиод был выключен
+      if (coil_fl == 1) //if flag was set
       {
-        LED1Onn = true;            //flag set
-        PORTB |= _BV(coilPin); //coil turn on
+        coil_fl = 0;            //flag reset
+        PORTB &= ~_BV(coilPin); //coil turn off
       }
     }
   }
@@ -117,19 +117,19 @@ void coil(void) //coil function, timer 1
 
 void button(void) //press long/sort func, timer 2
 {
-  if (timerLED2On == 0)
+  if (timer2_fl == 0)
   {
-    timerLED2On = 1;
+    timer2_fl = 1;
   }
 
   cli();
-  timerLED2Loop = timerLED2;
+  timer2_counter = timer2_cntr;
   sei();
 
-  if (timerLED2Loop >= INTERV_DEBOUNCE)
+  if (timer2_counter >= INTERV_DEBOUNCE)
   {
     cli();
-    timerLED2 = 0; //timer counter reset
+    timer2_cntr = 0; //timer counter reset
     sei();
     if (~PINB & _BV(buttInnerMISO)) //is button pressed?
     {
@@ -154,69 +154,97 @@ void button(void) //press long/sort func, timer 2
 
 void ledpin(void) //led control, temer4
 {
-  if (timerLED4On == 0)
-  {
-    timerLED4On = 1;
-  }
+  // if (timer4_fl == 0)
+  // {
+  //   timer4_fl = 1;
+  // }
 
   cli();
-  timerLED4Loop = timerLED4;
+  timer4_counter = timer4_cntr;
   sei();
-  if (timerLED4Loop >= INTERV_DEBOUNCE) //end time period reach
+  if (timer4_counter >= INTERV_LED) //end time period reach
   {
     cli();
-    timerLED4 = 0; //timer conter reset
+    timer4_cntr = 0; //timer conter reset
     sei();
-    //  LED4On = 0; //flag reset
-    if (!press3s && press100ms) //long press
+    // if (timer1_fl && !press3s) //if coil on
+    if (coil_fl) //if coil on
     {
-      if (LED4On == 0)
+      if (!led_fl)
       {
-        LED4On = 1;
-        PORTB &= ~_BV(ledPin); //port set
+        led_fl = 1;
+        PORTB &= ~_BV(ledPin) & ~_BV(buzzPin); //buzz off; //led on
       }
     }
-    else
+    else if (!press3s) //exit duration, led and buzzer is toggled
     {
-      // if (LED4On == 1)
-      // {
-      LED4On = 0;
-      PORTB |= _BV(ledPin); //port reset
-      // }
+      // led_fl = !led_fl;
+      if (led_fl)
+      {
+        led_fl = 0;
+        PORTB |= _BV(ledPin) | _BV(buzzPin); //buzz on; //led off
+      }
+      else
+      {
+        led_fl = 1;
+        PORTB &= ~_BV(ledPin) & ~_BV(buzzPin); //buzz off; //led on}
+      }
+    }
+    else // coil continuously off, buzz and led is slowly toggled
+    {
+      if (led_slow_cntr >= LED_SLOW_MAX)
+      {
+        led_slow_cntr = 0; //reset cntr
+        if (!led_fl)
+        {
+          PORTB = (PORTB & ~_BV(ledPin)) | _BV(buzzPin); //buzz on; //led on}
+          led_fl = 1;
+        }
+      }
+      else
+      {
+        led_slow_cntr++;
+        if (led_fl)
+        {
+          PORTB = (PORTB | _BV(ledPin)) & ~_BV(buzzPin); //buzz off; //led off
+          led_fl = 0;
+        }
+      }
     }
   }
 }
-void buzzer(unsigned int interval) //buzz control
-{
-  if (timerLED3On == 0)
-  {
-    timerLED3On = 1;
-  }
 
-  cli();
-  timerLED3Loop = timerLED3;
-  sei();
-  if (timerLED3Loop >= interval) //end time period reach
-  {
-    cli();
-    timerLED3 = 0; //timer conter reset
-    sei();
-    //  LED3On = 0; //flag reset
-  }
-  else if (timerLED3Loop > (interval - BUZZ_DURATION)) //BUZZ_DURATION time slot
-  {
-    if (LED3On == 0)
-    {
-      PORTB |= _BV(buzzPin); //port set
-      LED3On = 1;            //flag set
-    }
-  }
-  else //rest time slot
-  {
-    if (LED3On == 1)
-    {
-      PORTB &= ~_BV(buzzPin); //port reset
-      LED3On = 0;             //flag reset
-    }
-  }
-}
+// void buzzer(unsigned int interval) //buzz control. timer3
+// {
+//   if (timer3_fl == 0)
+//   {
+//     timer3_fl = 1;
+//   }
+
+//   cli();
+//   timer3_counter = timer3_cntr;
+//   sei();
+//   if (timer3_counter >= interval) //end time period reach
+//   {
+//     cli();
+//     timer3_cntr = 0; //timer conter reset
+//     sei();
+//     //  buzzer_fl = 0; //flag reset
+//   }
+//   else if (timer3_counter > (interval - BUZZ_DURATION)) //BUZZ_DURATION time slot
+//   {
+//     if (buzzer_fl == 0)
+//     {
+//       PORTB |= _BV(buzzPin); //buzz on
+//       buzzer_fl = 1;         //flag set
+//     }
+//   }
+//   else //rest time slot
+//   {
+//     if (buzzer_fl == 1)
+//     {
+//       PORTB &= ~_BV(buzzPin); //buzz off
+//       buzzer_fl = 0;          //flag reset
+//     }
+//   }
+// }
