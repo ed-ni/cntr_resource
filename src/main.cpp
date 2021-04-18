@@ -1,8 +1,8 @@
 #include "main.h"
 
-void coil(void);                    //coil on/off
-void ledpin(void);                  //led on/off
-void button(void);                      //button short/long pression
+void coil(void);   //coil on/off
+void ledpin(void); //led on/off
+void button(void); //button short/long pression
 //void buzzer(unsigned int interval); //функция звук (инт-л)
 
 #define buzzPin PB3
@@ -11,11 +11,11 @@ void button(void);                      //button short/long pression
 #define buttOuterMOSI PB0
 #define coilPin PB4
 #define INTERV_DEBOUNCE 9 //0.01s x 10 = 0.1 s debounce BUZZ_DURATION
-#define INTERV_LED 9     //x 0.01s = 0.1 s led blink on duration
+#define INTERV_LED 9      //x 0.01s = 0.1 s led blink on duration
 #define INTERV_LONG 29    //0.01s x INTERV_DEBOUNCE x 30 = 3 s
 //#define BUZZ_DURATION 4   //buzzer sound duration 0.05 s
 #define COIL_DURATION 399 //4 s
-#define LED_SLOW_MAX 20    //led blink dutycicle when coil func off
+#define LED_SLOW_MAX 20   //led blink dutycicle when coil func off
 
 volatile bool press100ms = 0; //turn off coil on 6 s
 volatile bool press3s = 1;    //turn off coil
@@ -23,13 +23,13 @@ volatile bool press3s = 1;    //turn off coil
 
 volatile bool timer1_fl = 1, timer2_fl; //переменная вкл/выкл таймера
 // volatile bool timer3_fl, timer4_fl;
-unsigned int buttCntr, led_slow_cntr;                              //debounced/short durations counter
-bool coil_fl = 0, led_fl = 0;                      //переменная для хранения состояния
+unsigned int buttCntr, led_slow_cntr; //debounced/short durations counter
+bool coil_fl = 0, led_fl = 0;         //переменная для хранения состояния
 // bool buzzer_fl;
-volatile unsigned long int timer1_cntr, timer1_counter;       //переменные подсчета мс и
-volatile unsigned long int timer2_cntr, timer2_counter;       //переменные подсчета мс и
+volatile unsigned long int timer1_cntr, timer1_counter; //переменные подсчета мс и
+volatile unsigned long int timer2_cntr, timer2_counter; //переменные подсчета мс и
 //volatile unsigned long int timer3_cntr, timer3_counter;       //переменные подсчета мс и
-volatile unsigned long int timer4_cntr, timer4_counter;       //переменные подсчета мс и
+volatile unsigned long int timer4_cntr, timer4_counter; //переменные подсчета мс и
 
 ISR(TIM0_COMPA_vect)
 {
@@ -42,7 +42,7 @@ ISR(TIM0_COMPA_vect)
   // if (timer3_fl)   //если включен миллисекудный таймер для buzzer
   //   timer3_cntr++; //инкремент переменной таймера (+1)
 
- // if (timer4_fl)   //если включен миллисекудный таймер для led
+  // if (timer4_fl)   //если включен миллисекудный таймер для led
   timer4_cntr++; //инкремент переменной таймера (+1)
 }
 
@@ -50,8 +50,9 @@ void setup()
 {
   //  INIT PINs
   //press3s = 1; //turn off coil
-  DDRB |= _BV(ledPin) | _BV(buzzPin) | _BV(coilPin);
-  PORTB = ~_BV(ledPin) & ~_BV(buzzPin) & ~_BV(coilPin) | _BV(buttInnerMISO) | _BV(buttOuterMOSI);
+  DDRB |= _BV(ledPin) | _BV(buzzPin) | _BV(coilPin) | _BV(buttOuterMOSI);
+  PORTB &= ~_BV(ledPin) & ~_BV(buzzPin) & ~_BV(coilPin) & ~_BV(buttOuterMOSI);//buttOuterMOSI became virtual GND
+  PORTB |= _BV(buttInnerMISO);//set pullup on input
 
   TCCR0B |= _BV(CS02) | _BV(CS00); // 1200000 дел. 1024 = 853 мкс
   TCCR0A |= _BV(WGM01);            //set  CTC mode
@@ -67,7 +68,7 @@ int main(void)
   while (1)
   {
     button();
-  //  buzzer(600);
+    //  buzzer(600);
     ledpin();
     coil();
   }
@@ -197,7 +198,8 @@ void ledpin(void) //led control, temer4
         led_slow_cntr = 0; //reset cntr
         if (!led_fl)
         {
-          PORTB = (PORTB & ~_BV(ledPin)) | _BV(buzzPin); //buzz on; //led on}
+          PORTB &= ~_BV(ledPin);//led on
+          PORTB |= _BV(buzzPin); //buzz on
           led_fl = 1;
         }
       }
@@ -206,7 +208,8 @@ void ledpin(void) //led control, temer4
         led_slow_cntr++;
         if (led_fl)
         {
-          PORTB = (PORTB | _BV(ledPin)) & ~_BV(buzzPin); //buzz off; //led off
+          PORTB |= _BV(ledPin);//led off
+          PORTB &= ~_BV(buzzPin); //buzz off
           led_fl = 0;
         }
       }
